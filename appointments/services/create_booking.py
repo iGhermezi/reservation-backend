@@ -12,19 +12,40 @@ class SlotTakenError(Exception):
     pass
 
 
+class BookingValidationError(Exception):
+    pass
+
+
 def create_booking(*, customer, provider_id, service, start_at):
     """یه نوبت نگه‌داشته‌شده بساز؛ اگه ساعت گرفته شده باشه خطا می‌ده."""
+    if start_at is None or timezone.is_naive(start_at):
+        raise BookingValidationError("زمان شروع باید تاریخ و ساعت معتبر باشد")
+    if start_at < timezone.now():
+        raise BookingValidationError("زمان گذشته قابل رزرو نیست")
+
     duration = service.duration_minutes or service.min_minutes
     end_at = start_at + timedelta(minutes=duration)
 
     with transaction.atomic():
         provider = Provider.objects.select_for_update().get(id=provider_id)
+
+        if provider.business_id != service.business_id:
+            raise BookingValidationError("ارائه‌دهنده متعلق به کسب‌وکار این خدمت نیست")
+        if not service.providers.filter(id=provider.id).exists():
+            raise BookingValidationError("این ارائه‌دهنده این خدمت را نمی‌دهد")
+        if not provider.is_active:
+            raise BookingValidationError("ارائه‌دهنده غیرفعال است")
+        if not service.is_active:
+            raise BookingValidationError("خدمت غیرفعال است")
+        if not service.business.is_active:
+            raise BookingValidationError("کسب‌وکار غیرفعال است")
+
         _expire_old_holds(provider)
         free = get_free_slots(provider, service, start_at.date())
         if start_at.time() not in free:
             raise SlotTakenError("این ساعت آزاد نیست")
         return Appointment.objects.create(
-            business=service.business,
+            business_id=service.business_id,
             customer=customer,
             provider=provider,
             service=service,
@@ -46,4 +67,3 @@ def _expire_old_holds(provider):
         status=Appointment.Status.HELD,
         occupies_until__lt=now,
     ).update(status=Appointment.Status.EXPIRED)
-

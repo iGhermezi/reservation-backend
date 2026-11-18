@@ -1,6 +1,9 @@
 from django.conf import settings
 from django.db import models
 from core.models import BaseModel
+from django.core.exceptions import ValidationError
+
+
 
 class Service(BaseModel):
     class DurationType(models.TextChoices):
@@ -48,20 +51,28 @@ class Service(BaseModel):
     def clean(self):
         super().clean()
         if self.duration_type == self.DurationType.FLEXIBLE and self.capacity > 1:
-            raise models.ValidationError(
+            raise ValidationError(
                 "Flexible duration is only allowed with capacity 1."
             )
         if self.duration_type == self.DurationType.FIXED and not self.duration_minutes:
-            raise models.ValidationError(
+            raise ValidationError(
                 "Fixed service needs duration_minutes."
             )
         if self.duration_type == self.DurationType.FLEXIBLE and not (
             self.min_minutes and self.max_minutes
         ):
-            raise models.ValidationError(
+            raise ValidationError(
                 "Flexible service needs min_minutes and max_minutes."
             )
-
+        if (
+            self.duration_type == self.DurationType.FLEXIBLE
+            and self.min_minutes is not None
+            and self.max_minutes is not None
+            and self.min_minutes > self.max_minutes
+        ):
+            raise ValidationError("min_minutes must be <= max_minutes.")
+        if self.deposit_amount is not None and self.price is not None and self.deposit_amount > self.price:
+            raise ValidationError("deposit_amount must be <= price.")
 
 
 class Provider(BaseModel):
@@ -96,6 +107,17 @@ class WorkingHour(BaseModel):
     start_time = models.TimeField()
     end_time = models.TimeField()
 
+    def clean(self):
+        super().clean()
+        if self.weekday is not None and not 0 <= self.weekday <= 6:
+            raise ValidationError("weekday must be between 0 and 6.")
+        if (
+            self.start_time is not None
+            and self.end_time is not None
+            and self.start_time >= self.end_time
+        ):
+            raise ValidationError("start_time must be before end_time.")
+
     def __str__(self):
         return f"{self.provider.display_name} - {self.weekday}: {self.start_time} to {self.end_time}"
 
@@ -111,6 +133,17 @@ class TimeOff(BaseModel):
     start_time = models.TimeField(null=True, blank=True)
     end_time = models.TimeField(null=True, blank=True)
     reason = models.CharField(max_length=200, blank=True, default="")
+
+    def clean(self):
+        super().clean()
+        if (self.start_time is None) != (self.end_time is None):
+            raise ValidationError("start_time and end_time must both be set or empty.")
+        if (
+            self.start_time is not None
+            and self.end_time is not None
+            and self.start_time >= self.end_time
+        ):
+            raise ValidationError("start_time must be before end_time.")
 
     def __str__(self):
         return f"{self.provider.display_name} - {self.date}"

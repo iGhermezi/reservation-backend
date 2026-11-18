@@ -33,6 +33,13 @@ class Business(BaseModel):
     def __str__(self):
         return f"{self.name} ({self.slug})"
 
+    def save(self, *args, **kwargs):
+        if self.pk and not self._state.adding:
+            original_slug = type(self).objects.only("slug").get(pk=self.pk).slug
+            if self.slug != original_slug:
+                raise ValueError("slug قابل تغییر نیست")
+        return super().save(*args, **kwargs)
+
 PERMISSIONS = (
     "appointments.view",
     "appointments.create_manual",

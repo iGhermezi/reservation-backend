@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from appointments.models import Appointment
-from appointments.services.create_booking import SlotTakenError, create_booking
+from appointments.services.create_booking import BookingValidationError, SlotTakenError, create_booking
 from businesses.models import Business, Membership
 from catalog.models import Service, Provider, WorkingHour
 
@@ -41,7 +41,7 @@ class CreateBookingTests(TestCase):
             start_time=time(9, 0),
             end_time=time(12, 0),
         )
-        self.start = timezone.make_aware(datetime(2026, 11, 14, 10, 0))
+        self.start = timezone.make_aware(datetime(2026, 11, 21, 10, 0))
 
     def test_booking_creates_held_appointment(self):
         appt = create_booking(
@@ -89,3 +89,39 @@ class CreateBookingTests(TestCase):
         appt.refresh_from_db()
         self.assertEqual(appt.status, Appointment.Status.EXPIRED)
         self.assertEqual(new_appt.status, Appointment.Status.HELD)
+
+
+    def test_booking_provider_from_other_business_fails(self):
+        other_business = Business.objects.create(
+            name="کلینیک دوم", slug="test-clinic-2"
+        )
+        other_provider = Provider.objects.create(
+            business=other_business, display_name="دکتر دوم"
+        )
+        with self.assertRaises(BookingValidationError):
+            create_booking(
+                customer=self.user,
+                provider_id=other_provider.id,
+                service=self.service,
+                start_at=timezone.make_aware(datetime(2026, 11, 21, 10, 0)),
+            )
+
+    def test_booking_inactive_service_fails(self):
+        self.service.is_active = False
+        self.service.save()
+        with self.assertRaises(BookingValidationError):
+            create_booking(
+                customer=self.user,
+                provider_id=self.provider.id,
+                service=self.service,
+                start_at=timezone.make_aware(datetime(2026, 11, 21, 10, 0)),
+            )
+
+    def test_booking_past_date_fails(self):
+        with self.assertRaises(BookingValidationError):
+            create_booking(
+                customer=self.user,
+                provider_id=self.provider.id,
+                service=self.service,
+                start_at=timezone.make_aware(datetime(2026, 11, 14, 10, 0)),
+            )

@@ -17,16 +17,16 @@ class Appointment(BaseModel):
 
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     business = models.ForeignKey(
-        "businesses.Business", on_delete=models.CASCADE, related_name="appointments"
+        "businesses.Business", on_delete=models.PROTECT, related_name="appointments"
     )
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="appointments"
     )
     provider = models.ForeignKey(
-        "catalog.Provider", on_delete=models.CASCADE, related_name="appointments"
+        "catalog.Provider", on_delete=models.PROTECT, related_name="appointments"
     )
     service = models.ForeignKey(
-        "catalog.Service", on_delete=models.CASCADE, related_name="appointments"
+        "catalog.Service", on_delete=models.PROTECT, related_name="appointments"
     )
     start_at = models.DateTimeField()
     end_at = models.DateTimeField()
@@ -52,6 +52,18 @@ class Appointment(BaseModel):
     custom_values = models.JSONField(default=dict, blank=True)
     name_snapshot = models.CharField(max_length=100, blank=True, default="")
     phone_snapshot = models.CharField(max_length=15, blank=True, default="")
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["provider", "start_at"],
+                name="appt_provider_start_idx",
+            ),
+            models.Index(
+                fields=["business", "start_at"],
+                name="appt_business_start_idx",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.public_id} - {self.status}"
