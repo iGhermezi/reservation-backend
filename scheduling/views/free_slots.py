@@ -13,6 +13,10 @@ class FreeSlotsView(APIView):
         provider = Provider.objects.get(id=serializer.validated_data["provider"])
         service = Service.objects.get(id=serializer.validated_data["service"])
         slots = get_free_slots(
-            provider, service, serializer.validated_data["date"]
-        )
+        provider,
+        service,
+        serializer.validated_data["date"],
+        duration_minutes=serializer.validated_data.get("duration_minutes"),
+    )    
         return Response({"slots": [s.strftime("%H:%M") for s in slots]})
+
