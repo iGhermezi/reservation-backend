@@ -220,3 +220,5 @@ __marimo__/
 .streamlit/secrets.toml
 media/
 .vscode/
+frontend/node_modules/
+frontend/dist/
