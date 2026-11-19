@@ -125,3 +125,47 @@ class CreateBookingTests(TestCase):
                 service=self.service,
                 start_at=timezone.make_aware(datetime(2026, 11, 14, 10, 0)),
             )
+
+    def test_flexible_booking_invalid_duration_fails(self):
+        flexible = Service.objects.create(
+            business=self.business,
+            name="ویزیت متغیر",
+            price=100000,
+            duration_type="flexible",
+            min_minutes=30,
+            max_minutes=120,
+            step_minutes=15,
+        )
+        flexible.providers.add(self.provider)
+        with self.assertRaises(BookingValidationError):
+            create_booking(
+                customer=self.user,
+                provider_id=self.provider.id,
+                service=flexible,
+                start_at=self.start,
+                duration_minutes=40,
+            )
+
+    def test_capacity_2_third_booking_fails(self):
+        group = Service.objects.create(
+            business=self.business,
+            name="کلاس گروهی",
+            price=100000,
+            duration_minutes=30,
+            step_minutes=30,
+            capacity=2,
+        )
+        group.providers.add(self.provider)
+        create_booking(
+            customer=self.user, provider_id=self.provider.id,
+            service=group, start_at=self.start,
+        )
+        create_booking(
+            customer=self.user, provider_id=self.provider.id,
+            service=group, start_at=self.start,
+        )
+        with self.assertRaises(SlotTakenError):
+            create_booking(
+                customer=self.user, provider_id=self.provider.id,
+                service=group, start_at=self.start,
+            )

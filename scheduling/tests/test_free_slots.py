@@ -137,3 +137,48 @@ class FreeSlotsTests(TestCase):
         )
         slots = get_free_slots(self.provider, self.service, self.day)
         self.assertIn("10:00", [s.strftime("%H:%M") for s in slots])
+
+
+    def test_free_slots_flexible_60_minutes(self):
+        flexible = Service.objects.create(
+            business=self.business,
+            name="ویزیت متغیر",
+            price=100000,
+            duration_type="flexible",
+            min_minutes=30,
+            max_minutes=120,
+            step_minutes=30,
+        )
+        flexible.providers.add(self.provider)
+        slots = get_free_slots(
+            self.provider, flexible, self.day, duration_minutes=60
+        )
+        self.assertEqual(
+            [s.strftime("%H:%M") for s in slots],
+            ["09:00", "09:30", "10:00", "10:30", "11:00"],
+        )
+
+    def test_free_slots_capacity_2_with_one_booking(self):
+        group = Service.objects.create(
+            business=self.business,
+            name="کلاس گروهی",
+            price=100000,
+            duration_minutes=30,
+            step_minutes=30,
+            capacity=2,
+        )
+        group.providers.add(self.provider)
+        Appointment.objects.create(
+            business=self.business,
+            customer=self.user,
+            provider=self.provider,
+            service=group,  
+            start_at=timezone.make_aware(datetime(2026, 11, 14, 10, 0)),
+            end_at=timezone.make_aware(datetime(2026, 11, 14, 10, 30)),
+            duration_minutes=30,
+            price_final=100000,
+            deposit_amount=0,
+            status="confirmed",
+        )
+        slots = get_free_slots(self.provider, group, self.day)
+        self.assertIn("10:00", [s.strftime("%H:%M") for s in slots])

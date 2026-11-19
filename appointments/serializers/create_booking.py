@@ -4,11 +4,14 @@ from rest_framework import serializers
 from appointments.services.create_booking import SlotTakenError
 from catalog.models import Provider, Service
 
-
 class CreateBookingSerializer(serializers.Serializer):
     provider = serializers.IntegerField()
     service = serializers.IntegerField()
     start_at = serializers.DateTimeField()
+    duration_minutes = serializers.IntegerField(
+        required=False, min_value=1
+    )
+
 
     def validate_start_at(self, value):
         if value < timezone.now():

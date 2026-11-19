@@ -6,6 +6,7 @@ from django.utils import timezone
 from appointments.models import Appointment
 from catalog.models import Provider
 from scheduling.services.free_slots import get_free_slots
+from scheduling.services.overlap import overlaps
 
 
 class SlotTakenError(Exception):
@@ -16,14 +17,28 @@ class BookingValidationError(Exception):
     pass
 
 
-def create_booking(*, customer, provider_id, service, start_at):
+def _resolve_duration(service, duration_minutes):
+    """مدت نهایی رزرو رو مشخص کن و اعتبارسنجی کن."""
+    if service.duration_type == service.DurationType.FIXED:
+        return service.duration_minutes
+
+    duration = duration_minutes or service.min_minutes
+    if duration < service.min_minutes or duration > service.max_minutes:
+        raise BookingValidationError("مدت باید بین حداقل و حداکثر خدمت باشد")
+    step = service.step_minutes or 15
+    if (duration - service.min_minutes) % step != 0:
+        raise BookingValidationError("مدت باید مضرب گام خدمت باشد")
+    return duration
+
+
+def create_booking(*, customer, provider_id, service, start_at, duration_minutes=None):
     """یه نوبت نگه‌داشته‌شده بساز؛ اگه ساعت گرفته شده باشه خطا می‌ده."""
     if start_at is None or timezone.is_naive(start_at):
         raise BookingValidationError("زمان شروع باید تاریخ و ساعت معتبر باشد")
     if start_at < timezone.now():
         raise BookingValidationError("زمان گذشته قابل رزرو نیست")
 
-    duration = service.duration_minutes or service.min_minutes
+    duration = _resolve_duration(service, duration_minutes)
     end_at = start_at + timedelta(minutes=duration)
 
     with transaction.atomic():
@@ -41,9 +56,26 @@ def create_booking(*, customer, provider_id, service, start_at):
             raise BookingValidationError("کسب‌وکار غیرفعال است")
 
         _expire_old_holds(provider)
-        free = get_free_slots(provider, service, start_at.date())
-        if start_at.time() not in free:
-            raise SlotTakenError("این ساعت آزاد نیست")
+
+        if service.capacity == 1:
+            free = get_free_slots(
+                provider, service, start_at.date(), duration_minutes=duration
+            )
+            if start_at.time() not in free:
+                raise SlotTakenError("این ساعت آزاد نیست")
+        else:
+            active_statuses = ["held", "pending_review", "awaiting_reupload", "confirmed"]
+            count = 0
+            for appt in provider.appointments.filter(
+                status__in=active_statuses,
+            ).exclude(status="held", occupies_until__lt=timezone.now()):
+                appt_start = timezone.localtime(appt.start_at)
+                appt_end = timezone.localtime(appt.end_at)
+                if overlaps(start_at, end_at, appt_start, appt_end):
+                    count += 1
+            if count >= service.capacity:
+                raise SlotTakenError("ظرفیت این ساعت پر شده است")
+
         return Appointment.objects.create(
             business_id=service.business_id,
             customer=customer,
