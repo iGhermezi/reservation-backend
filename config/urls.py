@@ -4,7 +4,8 @@ from django.urls import path
 from appointments.views.appointments import CreateBookingView
 from scheduling.views.free_slots import FreeSlotsView
 from accounts.views.auth import (
-    LoginView, RefreshView, RegisterView, RequestOtpView, VerifyOtpView,
+    LoginView, RefreshView, RegisterView, RequestOtpView, SetPasswordView,
+    VerifyOtpView,
 )
 
 
@@ -16,5 +17,6 @@ urlpatterns = [
     path("api/v1/auth/login/", LoginView.as_view(), name="login"),
     path("api/v1/auth/request-otp/", RequestOtpView.as_view(), name="request-otp"),
     path("api/v1/auth/verify-otp/", VerifyOtpView.as_view(), name="verify-otp"),
+    path("api/v1/auth/set-password/", SetPasswordView.as_view(), name="set-password"),
     path("api/v1/auth/refresh/", RefreshView.as_view(), name="token-refresh"),
 ]
