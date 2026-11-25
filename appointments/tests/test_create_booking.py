@@ -41,7 +41,7 @@ class CreateBookingTests(TestCase):
             start_time=time(9, 0),
             end_time=time(12, 0),
         )
-        self.start = timezone.make_aware(datetime(2026, 11, 21, 10, 0))
+        self.start = timezone.make_aware(datetime(2026, 11, 28, 10, 0))
 
     def test_booking_creates_held_appointment(self):
         appt = create_booking(
@@ -103,7 +103,7 @@ class CreateBookingTests(TestCase):
                 customer=self.user,
                 provider_id=other_provider.id,
                 service=self.service,
-                start_at=timezone.make_aware(datetime(2026, 11, 21, 10, 0)),
+                start_at=timezone.make_aware(datetime(2026, 11, 28, 10, 0)),
             )
 
     def test_booking_inactive_service_fails(self):
@@ -114,7 +114,7 @@ class CreateBookingTests(TestCase):
                 customer=self.user,
                 provider_id=self.provider.id,
                 service=self.service,
-                start_at=timezone.make_aware(datetime(2026, 11, 21, 10, 0)),
+                start_at=timezone.make_aware(datetime(2026, 11, 28, 10, 0)),
             )
 
     def test_booking_past_date_fails(self):

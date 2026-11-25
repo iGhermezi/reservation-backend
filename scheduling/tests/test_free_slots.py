@@ -41,7 +41,7 @@ class FreeSlotsTests(TestCase):
             start_time=time(9, 0),
             end_time=time(12, 0),
         )
-        self.day = date(2026, 11, 14)  # شنبه
+        self.day = date(2026, 11, 28)  # شنبه
 
     def test_free_slots_without_appointments(self):
         slots = get_free_slots(self.provider, self.service, self.day)
@@ -56,8 +56,8 @@ class FreeSlotsTests(TestCase):
             customer=self.user,
             provider=self.provider,
             service=self.service,
-            start_at=timezone.make_aware(datetime(2026, 11, 14, 10, 0)),
-            end_at=timezone.make_aware(datetime(2026, 11, 14, 10, 30)),
+            start_at=timezone.make_aware(datetime(2026, 11, 28, 10, 0)),
+            end_at=timezone.make_aware(datetime(2026, 11, 28, 10, 30)),
             duration_minutes=30,
             price_final=100000,
             deposit_amount=0,
@@ -109,8 +109,8 @@ class FreeSlotsTests(TestCase):
             customer=self.user,
             provider=self.provider,
             service=self.service,
-            start_at=timezone.make_aware(datetime(2026, 11, 14, 10, 0)),
-            end_at=timezone.make_aware(datetime(2026, 11, 14, 10, 30)),
+            start_at=timezone.make_aware(datetime(2026, 11, 28, 10, 0)),
+            end_at=timezone.make_aware(datetime(2026, 11, 28, 10, 30)),
             duration_minutes=30,
             price_final=100000,
             deposit_amount=0,
@@ -128,8 +128,8 @@ class FreeSlotsTests(TestCase):
             customer=self.user,
             provider=self.provider,
             service=self.service,
-            start_at=timezone.make_aware(datetime(2026, 11, 14, 10, 0)),
-            end_at=timezone.make_aware(datetime(2026, 11, 14, 10, 30)),
+            start_at=timezone.make_aware(datetime(2026, 11, 28, 10, 0)),
+            end_at=timezone.make_aware(datetime(2026, 11, 28, 10, 30)),
             duration_minutes=30,
             price_final=100000,
             deposit_amount=0,
@@ -172,9 +172,9 @@ class FreeSlotsTests(TestCase):
             business=self.business,
             customer=self.user,
             provider=self.provider,
-            service=group,  
-            start_at=timezone.make_aware(datetime(2026, 11, 14, 10, 0)),
-            end_at=timezone.make_aware(datetime(2026, 11, 14, 10, 30)),
+            service=group,
+            start_at=timezone.make_aware(datetime(2026, 11, 28, 10, 0)),
+            end_at=timezone.make_aware(datetime(2026, 11, 28, 10, 30)),
             duration_minutes=30,
             price_final=100000,
             deposit_amount=0,

@@ -3,11 +3,11 @@ from datetime import datetime, time, timedelta
 from django.utils import timezone
 
 from .overlap import overlaps, subtract_interval
-
+from .duration import resolve_duration
 
 def get_free_slots(provider, service, date, duration_minutes=None):
     """ساعت‌های آزاد یک ارائه‌دهنده برای یک خدمت در یک روز."""
-    duration = duration_minutes or service.duration_minutes or service.min_minutes
+    duration = resolve_duration(service, duration_minutes)
     step = service.step_minutes or 15
     now = timezone.now()
     skip_past = date == timezone.localtime(now).date()
