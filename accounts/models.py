@@ -1,7 +1,7 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
+from django.utils import timezone
 
 class UserManager(BaseUserManager):
     def create_user(self, phone_number, password=None, **extra_fields):
@@ -55,3 +55,25 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.phone_number
+
+class OtpCode(models.Model):
+    """کد یک‌بارمصرف پیامکی برای ورود با OTP."""
+    MAX_ATTEMPTS = 3
+    TTL_MINUTES = 5
+
+    phone_number = models.CharField(max_length=15, db_index=True)
+    code_hash = models.CharField(max_length=128)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    is_used = models.BooleanField(default=False)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    def is_locked(self):
+        return self.attempts >= self.MAX_ATTEMPTS
+
+    def __str__(self):
+        return f"{self.phone_number} ({'used' if self.is_used else 'active'})"
