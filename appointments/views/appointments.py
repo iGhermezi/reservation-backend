@@ -25,6 +25,8 @@ class CreateBookingView(APIView):
                 service=serializer.validated_data["service_obj"],
                 start_at=serializer.validated_data["start_at"],
                 duration_minutes=serializer.validated_data.get("duration_minutes"),
+                custom_values=serializer.validated_data.get("custom_values"),
+                addon_ids=serializer.validated_data.get("addon_ids"),
             )
         except SlotTakenError as e:
             return Response(

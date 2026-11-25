@@ -5,7 +5,8 @@ from django.utils import timezone
 from .overlap import overlaps, subtract_interval
 from .duration import resolve_duration
 
-def get_free_slots(provider, service, date, duration_minutes=None):
+
+def get_free_slots(provider, service, date, duration_minutes=None, exclude_appointment_id=None):
     """ساعت‌های آزاد یک ارائه‌دهنده برای یک خدمت در یک روز."""
     duration = resolve_duration(service, duration_minutes)
     step = service.step_minutes or 15
@@ -14,7 +15,7 @@ def get_free_slots(provider, service, date, duration_minutes=None):
     slots = []
 
     if service.capacity == 1:
-        for start, end in _free_intervals(provider, date, now):
+        for start, end in _free_intervals(provider, date, now, exclude_appointment_id):
             current = start
             while current + timedelta(minutes=duration) <= end:
                 if not skip_past or current >= now:
@@ -23,7 +24,7 @@ def get_free_slots(provider, service, date, duration_minutes=None):
         return slots
 
     base_intervals = _base_intervals(provider, date)
-    active = _active_appointments(provider, date, now)
+    active = _active_appointments(provider, date, now, exclude_appointment_id)
     for start, end in base_intervals:
         current = start
         while current + timedelta(minutes=duration) <= end:
@@ -65,24 +66,27 @@ def _base_intervals(provider, date):
     return intervals
 
 
-def _active_appointments(provider, date, now):
+def _active_appointments(provider, date, now, exclude_appointment_id=None):
     """نوبت‌های فعال امروز، بدون هولدهای منقضی."""
     active_statuses = ["held", "pending_review", "awaiting_reupload", "confirmed"]
     day_start = timezone.make_aware(datetime.combine(date, time.min))
     day_end = timezone.make_aware(
         datetime.combine(date + timedelta(days=1), time.min)
     )
-    return list(provider.appointments.filter(
+    queryset = provider.appointments.filter(
         start_at__gte=day_start,
         start_at__lt=day_end,
         status__in=active_statuses,
-    ).exclude(status="held", occupies_until__lt=now))
+    ).exclude(status="held", occupies_until__lt=now)
+    if exclude_appointment_id is not None:
+        queryset = queryset.exclude(pk=exclude_appointment_id)
+    return list(queryset)
 
 
-def _free_intervals(provider, date, now):
+def _free_intervals(provider, date, now, exclude_appointment_id=None):
     """بازه‌های خالی = ساعت کاری منهای مرخصی منهای نوبت‌های فعال."""
     intervals = _base_intervals(provider, date)
-    for appt in _active_appointments(provider, date, now):
+    for appt in _active_appointments(provider, date, now, exclude_appointment_id):
         intervals = [
             piece
             for start, end in intervals

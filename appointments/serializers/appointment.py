@@ -22,6 +22,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "review_deadline_at",
             "status_reason",
             "created_via",
+            "custom_values",
         ]
         read_only_fields = [
             "public_id",

@@ -67,3 +67,33 @@ class Appointment(BaseModel):
 
     def __str__(self):
         return f"{self.public_id} - {self.status}"
+
+class AppointmentLog(BaseModel):
+    class Action(models.TextChoices):
+        CREATED = "created", "ساخته شد"
+        CANCELLED = "cancelled", "لغو شد"
+        RESCHEDULED = "rescheduled", "تغییر زمان"
+
+    appointment = models.ForeignKey(
+        Appointment, on_delete=models.CASCADE, related_name="logs"
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="appointment_logs",
+    )
+    action = models.CharField(max_length=20, choices=Action.choices)
+    note = models.CharField(max_length=200, blank=True, default="")
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["appointment", "created_at"],
+                name="applog_appt_created_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.appointment.public_id} - {self.action}"
