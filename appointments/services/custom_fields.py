@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from catalog.models import ServiceAddon
 
 
@@ -28,8 +30,10 @@ def validate_custom_values(service, values):
             if not isinstance(value, str):
                 raise ValueError(f"فیلد {definition.label} باید متن باشد")
         elif field_type == "number":
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise ValueError(f"فیلد {definition.label} باید عدد باشد")
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError(f"فیلد {definition.label} باید عدد صحیح باشد")
+            if value < 0:
+                raise ValueError(f"فیلد {definition.label} نمی‌تواند منفی باشد")
         elif field_type == "choice":
             if value not in definition.choices:
                 raise ValueError(f"مقدار فیلد {definition.label} معتبر نیست")
@@ -65,9 +69,17 @@ def calculate_final_price(service, values, addon_ids=None):
 
         value = values[definition.key]
         if definition.field_type == "number":
-            total += definition.unit_price * value
+            try:
+                numeric_value = Decimal(str(value))
+            except (TypeError, InvalidOperation) as exc:
+                raise ValueError(
+                    f"مقدار فیلد {definition.label} معتبر نیست"
+                ) from exc
+            total += definition.unit_price * numeric_value
         elif definition.field_type in ("boolean", "choice"):
             if value:
                 total += definition.unit_price
 
+    if total <= 0:
+        raise ValueError("قیمت نهایی باید بیشتر از صفر باشد")
     return total

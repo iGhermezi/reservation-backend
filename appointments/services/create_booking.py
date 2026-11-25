@@ -3,11 +3,12 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
-from appointments.models import Appointment
+from appointments.models import Appointment, AppointmentLog
 from appointments.services.custom_fields import (
     calculate_final_price,
     validate_custom_values,
 )
+from appointments.services.log import log_appointment
 from catalog.models import Provider
 from scheduling.services.free_slots import get_free_slots
 from scheduling.services.duration import resolve_duration
@@ -80,7 +81,7 @@ def create_booking(
         except ValueError as e:
             raise BookingValidationError(str(e))
 
-        return Appointment.objects.create(
+        appointment = Appointment.objects.create(
             business_id=service.business_id,
             customer=customer,
             provider=provider,
@@ -94,6 +95,13 @@ def create_booking(
             occupies_until=timezone.now() + timedelta(minutes=10),
             custom_values=validated_values,
         )
+        log_appointment(
+            appointment,
+            AppointmentLog.Action.CREATED,
+            actor=customer,
+            note="نوبت ساخته شد",
+        )
+        return appointment
 
 
 def _expire_old_holds(provider):

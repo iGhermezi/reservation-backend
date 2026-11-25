@@ -1,4 +1,3 @@
-from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -6,6 +5,7 @@ from rest_framework.views import APIView
 
 from appointments.models import Appointment
 from appointments.serializers.appointment import AppointmentSerializer
+from appointments.serializers.reschedule import RescheduleSerializer
 from appointments.services.create_booking import SlotTakenError
 from appointments.services.reschedule_booking import (
     RescheduleValidationError,
@@ -29,10 +29,13 @@ class RescheduleBookingView(APIView):
                 {"detail": "نوبت پیدا نشد", "code": "not_found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        new_start_at = parse_datetime(request.data.get("start_at") or "")
+        serializer = RescheduleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         try:
             updated = reschedule_appointment(
-                appointment, by_user=request.user, new_start_at=new_start_at
+                appointment,
+                by_user=request.user,
+                new_start_at=serializer.validated_data["start_at"],
             )
         except SlotTakenError as e:
             return Response(

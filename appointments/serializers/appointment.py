@@ -26,6 +26,11 @@ class AppointmentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "public_id",
+            "business",
+            "customer",
+            "provider",
+            "service",
+            "start_at",
             "end_at",
             "duration_minutes",
             "price_final",
@@ -33,5 +38,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "status",
             "occupies_until",
             "review_deadline_at",
+            "status_reason",
             "created_via",
+            "custom_values",
         ]
